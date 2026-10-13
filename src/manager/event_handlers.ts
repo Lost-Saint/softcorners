@@ -9,8 +9,8 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
-import {ClipShadowEffect} from '../effect/clip_shadow_effect.js';
-import {RoundedCornersEffect} from '../effect/rounded_corners_effect.js';
+import {createClipShadowEffect} from '../effect/clip_shadow_effect.js';
+import {createRoundedCornersEffect} from '../effect/rounded_corners_effect.js';
 import {
     CLIP_SHADOW_EFFECT,
     ROUNDED_CORNERS_EFFECT,
@@ -71,7 +71,7 @@ export function onAddEffect(actor: RoundedWindowActor) {
 function createEffect(actor: RoundedWindowActor) {
     unwrapActor(actor)?.add_effect_with_name(
         ROUNDED_CORNERS_EFFECT,
-        new RoundedCornersEffect(),
+        createRoundedCornersEffect(),
     );
 
     const shadow = createShadow(actor);
@@ -129,7 +129,7 @@ export function onRemoveEffect(actor: RoundedWindowActor) {
     // Remove all timeout handler
     const timeoutId = actor.rwcCustomData?.unminimizedTimeoutId;
     if (timeoutId) {
-        GLib.source_remove(timeoutId);
+        GLib.Source.remove(timeoutId);
     }
     delete actor.rwcCustomData;
 }
@@ -183,7 +183,7 @@ export async function onUnminimize(actor: RoundedWindowActor) {
         actor.rwcCustomData !== undefined
     ) {
         const oldTimeout = actor.rwcCustomData.unminimizedTimeoutId;
-        if (oldTimeout !== 0) GLib.source_remove(oldTimeout);
+        if (oldTimeout !== 0) GLib.Source.remove(oldTimeout);
         actor.rwcCustomData.unminimizedTimeoutId = GLib.timeout_add(
             GLib.PRIORITY_DEFAULT,
             250,
@@ -232,7 +232,7 @@ function createShadow(actor: RoundedWindowActor) {
 
     // We have to clip the shadow because of this issue:
     // https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/4474
-    shadow.add_effect_with_name(CLIP_SHADOW_EFFECT, new ClipShadowEffect());
+    shadow.add_effect_with_name(CLIP_SHADOW_EFFECT, createClipShadowEffect());
 
     // Draw the shadow actor below the window actor.
     global.windowGroup.insert_child_below(shadow, actor);

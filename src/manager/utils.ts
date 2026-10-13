@@ -1,5 +1,6 @@
 /** @file Provides various utility functions used withing signal handling code. */
 
+import type GObject from 'gi://GObject';
 import type St from 'gi://St';
 import type {RoundedCornersEffect} from '../effect/rounded_corners_effect.js';
 import type {
@@ -20,6 +21,7 @@ import {
 import {readFile} from '../utils/file.js';
 import {logDebug} from '../utils/log.js';
 import {getPref} from '../utils/settings.js';
+import {hasMetaWindow} from '../utils/types.js';
 
 /**
  * Get the actor that rounded corners should be applied to.
@@ -56,25 +58,38 @@ export function getRoundedCornersCfg(win: Meta.Window) {
     return customCfgList[win.wmClass];
 }
 
-// Weird TypeScript magic :)
-type RoundedCornersEffectType = InstanceType<typeof RoundedCornersEffect>;
+/**
+ * Narrow the compositor actor of a window to a usable rounded window actor.
+ * get_compositor_private() is typed as GObject.Object, so this guard
+ * replaces casting at each call site.
+ *
+ * @param actor - The compositor actor to narrow.
+ * @returns Whether the actor is a window actor with a meta window.
+ */
+export function asRoundedWindowActor(
+    actor: GObject.Object | null,
+): actor is RoundedWindowActor {
+    return actor instanceof Meta.WindowActor && hasMetaWindow(actor);
+}
 
 /**
  * Get the Clutter.Effect object for the rounded corner effect of a specific
  * window.
  *
  * @param actor - The window actor to get the effect for.
- * @returns The corresponding Clutter.Effect object.
+ * @returns The corresponding Clutter.Effect object, or null when the window
+ *          has no rounded corners effect.
  */
-export function getRoundedCornersEffect(actor: RoundedWindowActor) {
-    const win = actor.metaWindow;
-    const name = ROUNDED_CORNERS_EFFECT;
-    const isXwayland =
-        win.get_client_type() === Meta.WindowClientType.X11 && actor.firstChild;
-
-    return isXwayland
-        ? (actor.firstChild.get_effect(name) as RoundedCornersEffectType)
-        : (actor.get_effect(name) as RoundedCornersEffectType);
+export function getRoundedCornersEffect(
+    actor: RoundedWindowActor,
+): RoundedCornersEffect | null {
+    const effect = unwrapActor(actor)?.get_effect(ROUNDED_CORNERS_EFFECT);
+    // Only our factory attaches an effect under this name, and both the
+    // GNOME 50 and 51 implementations expose updateUniforms. The check above
+    // validates the cast below.
+    return effect && 'updateUniforms' in effect
+        ? (effect as RoundedCornersEffect)
+        : null;
 }
 
 /** Compute outer bounds for rounded corners of a window

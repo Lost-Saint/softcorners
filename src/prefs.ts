@@ -13,6 +13,14 @@ import {logDebug} from './utils/log.js';
 import {initPrefs, uninitPrefs} from './utils/settings.js';
 
 export default class RoundedWindowCornersRebornPrefs extends ExtensionPreferences {
+    //
+    // NOTE: Adw.PreferencesWindow and win.add(page) are marked deprecated in
+    // the Adw types in favor of Adw.PreferencesDialog, but the Shell prefs
+    // host still passes a PreferencesWindow subclass on both GNOME 50 and 51
+    // (js/dbusServices/extensions/extensionPrefsDialog.js upstream), so this
+    // signature must stay. If upstream ever migrates the host to a Dialog,
+    // switch the parameter type and the 'close-request' handler below to the
+    // Dialog 'closed' signal.
     // biome-ignore lint/suspicious/useAwait: ExtensionPreferences requires this to be async
     async fillPreferencesWindow(win: Adw.PreferencesWindow) {
         initPrefs(this.getSettings());

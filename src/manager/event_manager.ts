@@ -11,6 +11,7 @@ import {logDebug} from '../utils/log.js';
 import {prefs} from '../utils/settings.js';
 import {hasMetaWindow, type RoundedWindowActor} from '../utils/types.js';
 import * as handlers from './event_handlers.js';
+import {asRoundedWindowActor} from './utils.js';
 
 /**
  * The rounded corners effect has to perform some actions when differen events
@@ -40,14 +41,30 @@ export function enableEffect() {
         global.display,
         'window-created',
         (_: Meta.Display, win: Meta.Window) => {
-            const actor: RoundedWindowActor = win.get_compositor_private();
+            const actor = win.get_compositor_private();
+
+            // The compositor actor may not exist yet for some clients
+            // (e.g. Electron apps spawning windows in quick succession, see
+            // issue #131 where a null window object caused a fatal TypeError).
+            // asRoundedWindowActor narrows the type without a cast; skip
+            // windows that have no usable actor, a later signal will pick
+            // them up.
+            if (!asRoundedWindowActor(actor)) {
+                return;
+            }
 
             // If wm_class_instance of Meta.Window is null, wait for it to be
             // set before applying the effect.
             if (win?.wmClass === null) {
                 const notifyId = win.connect('notify::wm-class', () => {
-                    applyEffectTo(actor);
                     win.disconnect(notifyId);
+                    // Re-fetch instead of using the captured actor: the
+                    // window may have been destroyed and recreated between
+                    // the two signals.
+                    const current = win.get_compositor_private();
+                    if (asRoundedWindowActor(current)) {
+                        applyEffectTo(current);
+                    }
                 });
             } else {
                 applyEffectTo(actor);

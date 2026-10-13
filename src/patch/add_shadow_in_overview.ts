@@ -2,7 +2,6 @@
 
 import type Meta from 'gi://Meta';
 import type {WindowPreview} from 'resource:///org/gnome/shell/ui/windowPreview.js';
-import type {RoundedWindowActor} from '../utils/types.js';
 
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
@@ -10,8 +9,8 @@ import Graphene from 'gi://Graphene';
 
 import {overview} from 'resource:///org/gnome/shell/ui/main.js';
 
-import {LinearFilterEffect} from '../effect/linear_filter_effect.js';
-import {shouldEnableEffect} from '../manager/utils.js';
+import {createLinearFilterEffect} from '../effect/linear_filter_effect.js';
+import {asRoundedWindowActor, shouldEnableEffect} from '../manager/utils.js';
 import {OVERVIEW_SHADOW_ACTOR, SHADOW_PADDING} from '../utils/constants.js';
 import {logDebug} from '../utils/log.js';
 
@@ -35,7 +34,12 @@ export async function addShadowInOverview(
     // If the original window doesn't have rounded corners or a shadow,
     // we don't need to do anything, so we can skip it.
     const hasRoundedCorners = await shouldEnableEffect(window);
-    const windowActor = window.get_compositor_private() as RoundedWindowActor;
+    const windowActor = window.get_compositor_private();
+    // The compositor actor can be missing (or torn down) for windows that
+    // are being created or destroyed while the overview is built.
+    if (!asRoundedWindowActor(windowActor)) {
+        return;
+    }
     const shadow = windowActor.rwcCustomData?.shadow;
     if (!(hasRoundedCorners && shadow)) {
         return;
@@ -49,7 +53,7 @@ export async function addShadowInOverview(
     // Apply linear interpolation to the window preview to make it look
     // better (there's an upstream GNOME bug causing windows to be blurry,
     // this makes the effect less noticeable)
-    windowContainer.firstChild?.add_effect(new LinearFilterEffect());
+    windowContainer.firstChild?.add_effect(createLinearFilterEffect());
 
     // Create a clone of the window's shadow actor and add it to the preview
     const shadowActorClone = new OverviewShadowActorClone(shadow, self);
@@ -95,7 +99,6 @@ const OverviewShadowActorClone = GObject.registerClass(
             // way when leaving the overview (eg. by pressing ESC). I have no
             // idea why this is the case, but oh well. GNOME.
             const leavingOverview =
-                // @ts-expect-error: TODO https://github.com/gjsify/gnome-shell/pull/123
                 overview._overview.controls._workspacesDisplay._leavingOverview;
             const windowContainerBox = leavingOverview
                 ? this.windowPreview.windowContainer.get_allocation_box()
@@ -109,9 +112,12 @@ const OverviewShadowActorClone = GObject.registerClass(
 
             // Scale the shadow by the same scale factor that the window preview
             // is scaled by.
+            const frameWidth = metaWindow.get_frame_rect().width;
+            if (frameWidth <= 0) {
+                return;
+            }
             const containerScaleFactor =
-                windowContainerBox.get_width() /
-                metaWindow.get_frame_rect().width;
+                windowContainerBox.get_width() / frameWidth;
             const paddings = SHADOW_PADDING * containerScaleFactor;
 
             // Setup the bounding box of the shadow actor.

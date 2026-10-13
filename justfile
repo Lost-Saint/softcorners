@@ -2,13 +2,13 @@
 set shell := ['bash', '-O', 'globstar', '-c']
 
 buildDir := './_build'
-uuid := 'rounded-window-corners@fxgn'
+uuid := 'soft-corners@lostsaint'
 
 # Compile the extension and all resources
 build: clean && pot
   # Compile TypeScript
-  npm install
-  npx tsc --outDir {{buildDir}}
+  bun install
+  bun x tsc --outDir {{buildDir}}
 
   # Copy non-JS files
   cp -r ./resources/* {{buildDir}}

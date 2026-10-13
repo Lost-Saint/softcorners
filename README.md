@@ -1,7 +1,7 @@
 ![Screenshot](https://github.com/user-attachments/assets/0bde1a86-37c8-4d53-b9ca-e049799f5355)
 
 <div align="center">
-  <h1>Rounded Window Corners Reborn</h1>
+  <h1>Soft Corners</h1>
   <p><i>A GNOME extension that adds rounded corners to all windows</i></p>
   <a href="https://extensions.gnome.org/extension/7048/rounded-window-corners-reborn">
     <img src="https://img.shields.io/badge/Install%20from-extensions.gnome.org-4A86CF?style=for-the-badge&logo=Gnome&logoColor=white"/>
@@ -32,8 +32,7 @@ pre-built archive from GitHub Actions.
 ### From source code
 
 1. Install the dependencies:
-    - Node.js
-    - npm
+    - [Bun](https://bun.sh)
     - gettext
     - [just](https://just.systems)
 
